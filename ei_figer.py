@@ -1364,7 +1364,7 @@ class EiAnimation(object):
         #rotations
         count = unpack('i', afile.read(4))[0]
         self.max_frame_count = count
-        #print ('rotation frames: ' + str(count))
+        print ('rotation frames: ' + str(count))
         tmp = [0.0, 0.0, 0.0, 0.0]
         for _ in range(count):
             for i in range(4):
@@ -1373,7 +1373,7 @@ class EiAnimation(object):
 
         #translations
         count = unpack('i', afile.read(4))[0]
-        #print('translation frames: ' + str(count))
+        print('translation frames: ' + str(count))
         tmp = [0.0, 0.0, 0.0]
         for _ in range(count):
             for i in range(3):
@@ -1457,9 +1457,9 @@ class EiImportAnimation(bpy.types.Operator):
         global ANM_TABLE
         links, root_mesh = import_lnk(path_file)
         # >>>>>TODO recalculate test unit before import
-        #print('root: ' + root_mesh)
-        #print('links')
-        #print(links)
+        print('root: ' + root_mesh)
+        print('links')
+        print(links)
         for node in links:
             if node not in bpy.data.objects:
                 continue
@@ -1467,12 +1467,12 @@ class EiImportAnimation(bpy.types.Operator):
             if os.path.exists(anmfile):
                 cur_a = EiAnimation()
                 cur_a.path = anmfile
-                cur_a.name = MORPH_COMP[8] + node
+                cur_a.name = MORPH_COMP[0] + node
                 if cur_a.read_file():
-                    ANM_TABLE[MORPH_COMP[8] + node] = cur_a
+                    ANM_TABLE[MORPH_COMP[0] + node] = cur_a
         anmlnk = order(links, root_mesh)
-        #print('anmlink')
-        #print(anmlnk)
+        print('anmlink')
+        print(anmlnk)
 
         #>>>>>TODO clear timeline
         #1way: select object, remove animations
@@ -1485,11 +1485,12 @@ class EiImportAnimation(bpy.types.Operator):
         for cur_frame in range(frames):
             scene.frame_set(cur_frame)
             for node in anmlnk:
-                name = MORPH_COMP[8] + node
+                name = MORPH_COMP[0] + node
                 if (name) not in ANM_TABLE:
                     print(node + ' animation missed!!!')
                     continue
                 if (name) not in bpy.data.objects:
+                    print(node + ' object not found!')
                     continue
                 if anmlnk.index(node) == 0:
                     ANM_TABLE[name].set_animation_data(cur_frame, True)
@@ -1637,7 +1638,6 @@ def register():
 def unregister():
     bpy.utils.unregister_module(__name__)
     bpy.types.Scene.scalefig
-    bpy.types.Scene.scale
     bpy.types.Scene.selectType
     bpy.types.Scene.MorphType
     bpy.types.Scene.MorphComp
