@@ -1304,14 +1304,43 @@ class EIImport(bpy.types.Operator):
                         morphed_links[MORPH_COMP[i + 1] + base_node] = MORPH_COMP[i + 1] + \
                             links[base_node]
                 create_hierarchy(morphed_links)
-            for node in links:
-                bonfile = os.path.join(os.path.dirname(path_file), node + '.bon')
+            
+            ################### SKELETON
+            print('creatON')
+            bpy.ops.object.armature_add()
+            for ob in bpy.data.objects:
+                if ob.select:
+                    break
+            arm = ob.data
+            
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.data.objects['Armature'].location = (0.0, 0.0, 0.0)
+            arm.edit_bones.remove(arm.edit_bones.active)
+            skeletonLNK = order(links, root_mesh)
+            print(skeletonLNK)
+                    
+            for boneName in skeletonLNK:
+                bonfile = os.path.join(os.path.dirname(path_file), boneName + '.bon')
                 if os.path.exists(bonfile):
                     cur_b = EiBon()
                     cur_b.path = bonfile
-                    cur_b.name = node
+                    cur_b.name = boneName
                     cur_b.read_pos()
                     cur_b.set_pos(scene.MorphType)
+                    
+                    arm.edit_bones.new(boneName)
+                    nodeBone = arm.edit_bones.get(boneName)
+                    parentBoneName = links.get(boneName)
+                    if parentBoneName == None:
+                        nodeBone.tail = cur_b.pos[0]
+                    else:
+                        parentBone = arm.edit_bones.get(parentBoneName)
+                        
+                        nodeBone.parent = parentBone
+                        nodeBone.head = nodeBone.parent.tail
+                        nodeBone.tail = cur_b.pos[0]
+                        
+                    ################### SKELETON
 
         if path_file.lower().endswith('.fig'):
             cur_m = EiMesh()
