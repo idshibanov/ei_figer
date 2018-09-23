@@ -1270,6 +1270,14 @@ class EIImport(bpy.types.Operator):
     bl_idname = 'object.eimodelimport'
     bl_description = 'Import model from Evil Islands file'
     filepath = bpy.props.StringProperty(subtype='FILE_PATH')
+    
+    def countChildrenBones(self, links, target):
+        count = 0
+        for base_node in links.values():
+            if base_node == target:
+                count += 1 # i miss C++
+    
+        return count
 
     def execute(self, context):
         self.report({'INFO'}, 'executing import')
@@ -1310,7 +1318,6 @@ class EIImport(bpy.types.Operator):
                 create_hierarchy(morphed_links)
             
             ################### SKELETON
-            print('creatON')
             bpy.ops.object.armature_add()
             for ob in bpy.data.objects:
                 if ob.select:
@@ -1353,20 +1360,40 @@ class EIImport(bpy.types.Operator):
                                 print(vertexObj.co)
                                 print(vrtxVector.length)
                     
-                    arm.edit_bones.new(boneName)
-                    nodeBone = arm.edit_bones.get(boneName)
-                    parentBoneName = links.get(boneName)
+                    #boneName tl4
+                    currentBoneName = boneName #tl3
+                    parentBoneName = links.get(boneName) #tl2
+                    
+                    #skip creating bones if root node
+                    if parentBoneName == None:
+                        continue
+                        
+                    currentBoneName = parentBoneName #tl4 will become tl3
+                    parentBoneName = links.get(currentBoneName) #tl3 will become tl2
+                        
+                    print('Adding new bone: ' + currentBoneName + ' children: ' + str(self.countChildrenBones(links, currentBoneName)))
+                    arm.edit_bones.new(currentBoneName)
+                    nodeBone = arm.edit_bones.get(currentBoneName)
+                    
                     if parentBoneName == None:
                         nodeBone.tail = cur_b.pos[0]
                     else:
+                        print('Lookup for parent: ' + parentBoneName) 
                         parentBone = arm.edit_bones.get(parentBoneName)
                         
                         nodeBone.parent = parentBone
                         nodeBone.head = nodeBone.parent.tail
-                        if boneName == 'tl4':
-                            nodeBone.head.x += cur_b.pos[0][0]
-                            nodeBone.head.y += cur_b.pos[0][1]
-                            nodeBone.head.z += cur_b.pos[0][2]
+                        #if this is a last part
+                        if self.countChildrenBones(links, boneName):
+                            nodeBone.tail = nodeBone.head
+                            nodeBone.tail.x += cur_b.pos[0][0]
+                            nodeBone.tail.y += cur_b.pos[0][1]
+                            nodeBone.tail.z += cur_b.pos[0][2]
+                            
+                            arm.edit_bones.new(boneName)
+                            extraB = arm.edit_bones.get(boneName)
+                            extraB.parent = nodeBone
+                            extraB.head = extraB.parent.tail
                             nodeBone.tail = nodeBone.head
                             nodeBone.tail.x += tlSuperLoc[0]
                             nodeBone.tail.y += tlSuperLoc[1]
