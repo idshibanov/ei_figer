@@ -30,6 +30,7 @@ from math import sqrt
 from struct import pack, unpack
 import time
 import re
+import mathutils
 
 import bmesh
 import bpy
@@ -1277,6 +1278,7 @@ class EIImport(bpy.types.Operator):
         clean()
 
         if path_file.lower().endswith('.lnk'):
+            tl4Mesh = EiMesh()
             links, root_mesh = import_lnk(path_file)
             print('root is ' + root_mesh)
             for node in links:
@@ -1287,10 +1289,8 @@ class EIImport(bpy.types.Operator):
                     cur_m.name = node
                     cur_m.read_file()
                     cur_m.create_mesh(scene.MorphType)
-                    print("STATS: " + cur_m.name)
-                    print(cur_m.center[0])
-                    print(cur_m.fmin[0])
-                    print(cur_m.fmax[0])
+                    if node == 'tl4':
+                        tl4Mesh = cur_m
 
             create_hierarchy(links)
             if scene.MorphType == 'smpl':
@@ -1325,12 +1325,33 @@ class EIImport(bpy.types.Operator):
                     
             for boneName in skeletonLNK:
                 bonfile = os.path.join(os.path.dirname(path_file), boneName + '.bon')
+                
                 if os.path.exists(bonfile):
                     cur_b = EiBon()
                     cur_b.path = bonfile
                     cur_b.name = boneName
                     cur_b.read_pos()
                     cur_b.set_pos(scene.MorphType)
+                
+                    boneStartVect = mathutils.Vector(cur_b.pos[0])
+                    tlSuperLoc = (0.0, 0.0, 0.0)
+                    
+                    if boneName == 'tl4':
+                        tlm = bpy.data.meshes[boneName]
+                        print(tlm)
+                        maxLen = 0.0
+                        print(boneStartVect)
+                        #for meshFace in tl4Mesh.verts:
+                        #    for vertexTuple in meshFace:
+                        for vertexObj in tlm.vertices:
+                            vrtxVector = mathutils.Vector(vertexObj.co)
+                            vrtxVector += boneStartVect
+                            if (vrtxVector.length > maxLen):
+                                maxLen = vrtxVector.length
+                                tlSuperLoc = vertexObj.co.to_tuple()
+                                print('Found point: ')
+                                print(vertexObj.co)
+                                print(vrtxVector.length)
                     
                     arm.edit_bones.new(boneName)
                     nodeBone = arm.edit_bones.get(boneName)
@@ -1342,10 +1363,19 @@ class EIImport(bpy.types.Operator):
                         
                         nodeBone.parent = parentBone
                         nodeBone.head = nodeBone.parent.tail
-                        nodeBone.tail = nodeBone.head
-                        nodeBone.tail.x += cur_b.pos[0][0]
-                        nodeBone.tail.y += cur_b.pos[0][1]
-                        nodeBone.tail.z += cur_b.pos[0][2]
+                        if boneName == 'tl4':
+                            nodeBone.head.x += cur_b.pos[0][0]
+                            nodeBone.head.y += cur_b.pos[0][1]
+                            nodeBone.head.z += cur_b.pos[0][2]
+                            nodeBone.tail = nodeBone.head
+                            nodeBone.tail.x += tlSuperLoc[0]
+                            nodeBone.tail.y += tlSuperLoc[1]
+                            nodeBone.tail.z += tlSuperLoc[2]
+                        else:
+                            nodeBone.tail = nodeBone.head
+                            nodeBone.tail.x += cur_b.pos[0][0]
+                            nodeBone.tail.y += cur_b.pos[0][1]
+                            nodeBone.tail.z += cur_b.pos[0][2]
                         
                     ################### SKELETON
 
