@@ -1287,6 +1287,10 @@ class EIImport(bpy.types.Operator):
                     cur_m.name = node
                     cur_m.read_file()
                     cur_m.create_mesh(scene.MorphType)
+                    print("STATS: " + cur_m.name)
+                    print(cur_m.center[0])
+                    print(cur_m.fmin[0])
+                    print(cur_m.fmax[0])
 
             create_hierarchy(links)
             if scene.MorphType == 'smpl':
@@ -1338,7 +1342,10 @@ class EIImport(bpy.types.Operator):
                         
                         nodeBone.parent = parentBone
                         nodeBone.head = nodeBone.parent.tail
-                        nodeBone.tail = cur_b.pos[0]
+                        nodeBone.tail = nodeBone.head
+                        nodeBone.tail.x += cur_b.pos[0][0]
+                        nodeBone.tail.y += cur_b.pos[0][1]
+                        nodeBone.tail.z += cur_b.pos[0][2]
                         
                     ################### SKELETON
 
