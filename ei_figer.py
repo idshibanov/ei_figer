@@ -1381,7 +1381,7 @@ class EIImport(bpy.types.Operator):
                             nodeBone.tail.z += cur_b.pos[0][2]
                             
                             
-                            # calculate approximate tail position for new bone                            
+                            # calculate approximate tail position for new bone
                             boneStartVect = mathutils.Vector(cur_b.pos[0])
                             tailPosition = None                    
                             blenderMesh = bpy.data.meshes[boneName]
@@ -1392,9 +1392,6 @@ class EIImport(bpy.types.Operator):
                                 if (vrtxVector.length > maxLen):
                                     maxLen = vrtxVector.length
                                     tailPosition = vertexObj.co
-                                    print('Found point for ' + boneName)
-                                    print(tailPosition)
-                                    print(vrtxVector.length)
                             
                             # add extra bone
                             arm.edit_bones.new(boneName)
@@ -1499,17 +1496,23 @@ class EiAnimation(object):
         sets animation data to self.name object
         '''
         global FIG_TABLE
+        
+        arm = bpy.data.objects['Armature']
+        bpy.context.scene.objects.active = arm
+        bpy.ops.object.mode_set(mode='POSE')
 
-        obj = bpy.data.objects[self.name]
-        obj.rotation_mode = 'QUATERNION'
-        obj.rotation_quaternion = self.rotations[frame]
-        obj.keyframe_insert(data_path='rotation_quaternion', index=-1)
+        #obj = bpy.data.objects[self.name]
+        pbone = arm.pose.bones.get(self.name)
+        if pbone != None:
+            pbone.rotation_mode = 'QUATERNION'
+            pbone.rotation_quaternion = self.rotations[frame]
+            pbone.keyframe_insert(data_path='rotation_quaternion', index=-1)
         # >>>>>TODO recalculate translations
-        if is_root:
-            scale = obj.data.vertices[0].co[0] / FIG_TABLE[self.name].verts[7][0][0]
-            # print('scale: ' + str(scale))
-            for i in range(3):
-                obj.location[i] = self.translations[frame][i] * scale
+        #if is_root:
+        #    scale = obj.data.vertices[0].co[0] / FIG_TABLE[self.name].verts[7][0][0]
+        #    # print('scale: ' + str(scale))
+        #    for i in range(3):
+        #        obj.location[i] = self.translations[frame][i] * scale
         # >>>>>TODO calculate translation for non-root parts
         #else:
             # loc = tuple(obj.location)
@@ -1517,7 +1520,7 @@ class EiAnimation(object):
             #     obj.location[i] = anm_table[name].translations[cur_frame][i] *\
             #              loc[i] / BON_TABLE[name].pos[7][i]
 
-        obj.keyframe_insert(data_path='location', index=-1)
+        #obj.keyframe_insert(data_path='location', index=-1)
 
     def write_file(self):
         '''
