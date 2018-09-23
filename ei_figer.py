@@ -1339,41 +1339,31 @@ class EIImport(bpy.types.Operator):
                     cur_b.name = boneName
                     cur_b.read_pos()
                     cur_b.set_pos(scene.MorphType)
-                
-                    boneStartVect = mathutils.Vector(cur_b.pos[0])
-                    tlSuperLoc = (0.0, 0.0, 0.0)
                     
-                    if boneName == 'tl4':
-                        tlm = bpy.data.meshes[boneName]
-                        print(tlm)
-                        maxLen = 0.0
-                        print(boneStartVect)
-                        #for meshFace in tl4Mesh.verts:
-                        #    for vertexTuple in meshFace:
-                        for vertexObj in tlm.vertices:
-                            vrtxVector = mathutils.Vector(vertexObj.co)
-                            vrtxVector += boneStartVect
-                            if (vrtxVector.length > maxLen):
-                                maxLen = vrtxVector.length
-                                tlSuperLoc = vertexObj.co.to_tuple()
-                                print('Found point: ')
-                                print(vertexObj.co)
-                                print(vrtxVector.length)
-                    
-                    #boneName tl4
-                    currentBoneName = boneName #tl3
-                    parentBoneName = links.get(boneName) #tl2
+                    #boneName nc
+                    currentBoneName = boneName #nc
+                    parentBoneName = links.get(boneName) #bd
                     
                     #skip creating bones if root node
                     if parentBoneName == None:
                         continue
                         
-                    currentBoneName = parentBoneName #tl4 will become tl3
-                    parentBoneName = links.get(currentBoneName) #tl3 will become tl2
-                        
-                    print('Adding new bone: ' + currentBoneName + ' children: ' + str(self.countChildrenBones(links, currentBoneName)))
+                    currentBoneName = parentBoneName #nc will become bd
+                    parentBoneName = links.get(currentBoneName) #bd wil become hp
+                    
+                    childCount = self.countChildrenBones(links, currentBoneName)
+                    if childCount > 1:
+                        currentBoneName += '.' + boneName #if trying to add a bone with siblings
+                    
+                    grandCCount = self.countChildrenBones(links, parentBoneName)
+                    if grandCCount > 1:
+                        parentBoneName += '.' + currentBoneName #hp will become hp.bd
+                    
+                    print('Adding new bone: ' + currentBoneName + ' child: ' + str(childCount) + 'gp: ' + str(grandCCount))
                     arm.edit_bones.new(currentBoneName)
                     nodeBone = arm.edit_bones.get(currentBoneName)
+                    
+                    #fix cur_b by looking up the mesh
                     
                     if parentBoneName == None:
                         nodeBone.tail = cur_b.pos[0]
@@ -1384,20 +1374,35 @@ class EIImport(bpy.types.Operator):
                         nodeBone.parent = parentBone
                         nodeBone.head = nodeBone.parent.tail
                         #if this is a last part
-                        if self.countChildrenBones(links, boneName):
+                        if self.countChildrenBones(links, boneName) == 0:
                             nodeBone.tail = nodeBone.head
                             nodeBone.tail.x += cur_b.pos[0][0]
                             nodeBone.tail.y += cur_b.pos[0][1]
                             nodeBone.tail.z += cur_b.pos[0][2]
                             
+                            
+                            # calculate approximate tail position for new bone                            
+                            boneStartVect = mathutils.Vector(cur_b.pos[0])
+                            tailPosition = None                    
+                            blenderMesh = bpy.data.meshes[boneName]
+                            maxLen = 0.0
+                            for vertexObj in blenderMesh.vertices:
+                                vrtxVector = mathutils.Vector(vertexObj.co)
+                                vrtxVector += boneStartVect
+                                if (vrtxVector.length > maxLen):
+                                    maxLen = vrtxVector.length
+                                    tailPosition = vertexObj.co
+                                    #print('Found point: ')
+                                    #print(vertexObj.co)
+                                    #print(vrtxVector.length)
+                            
+                            # add extra bone
                             arm.edit_bones.new(boneName)
                             extraB = arm.edit_bones.get(boneName)
                             extraB.parent = nodeBone
                             extraB.head = extraB.parent.tail
-                            nodeBone.tail = nodeBone.head
-                            nodeBone.tail.x += tlSuperLoc[0]
-                            nodeBone.tail.y += tlSuperLoc[1]
-                            nodeBone.tail.z += tlSuperLoc[2]
+                            extraB.tail = nodeBone.head
+                            extraB.tail += tailPosition
                         else:
                             nodeBone.tail = nodeBone.head
                             nodeBone.tail.x += cur_b.pos[0][0]
