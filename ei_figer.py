@@ -1359,7 +1359,7 @@ class EIImport(bpy.types.Operator):
                     if grandCCount > 1:
                         parentBoneName += '.' + currentBoneName #hp will become hp.bd
                     
-                    print('Adding new bone: ' + currentBoneName + ' child: ' + str(childCount) + 'gp: ' + str(grandCCount))
+                    #print('Adding new bone: ' + currentBoneName + ' child: ' + str(childCount) + 'gp: ' + str(grandCCount))
                     arm.edit_bones.new(currentBoneName)
                     nodeBone = arm.edit_bones.get(currentBoneName)
                     
@@ -1368,7 +1368,7 @@ class EIImport(bpy.types.Operator):
                     if parentBoneName == None:
                         nodeBone.tail = cur_b.pos[0]
                     else:
-                        print('Lookup for parent: ' + parentBoneName) 
+                        #print('Lookup for parent: ' + parentBoneName) 
                         parentBone = arm.edit_bones.get(parentBoneName)
                         
                         nodeBone.parent = parentBone
@@ -1392,16 +1392,16 @@ class EIImport(bpy.types.Operator):
                                 if (vrtxVector.length > maxLen):
                                     maxLen = vrtxVector.length
                                     tailPosition = vertexObj.co
-                                    #print('Found point: ')
-                                    #print(vertexObj.co)
-                                    #print(vrtxVector.length)
+                                    print('Found point for ' + boneName)
+                                    print(tailPosition)
+                                    print(vrtxVector.length)
                             
                             # add extra bone
                             arm.edit_bones.new(boneName)
                             extraB = arm.edit_bones.get(boneName)
                             extraB.parent = nodeBone
                             extraB.head = extraB.parent.tail
-                            extraB.tail = nodeBone.head
+                            extraB.tail = extraB.head
                             extraB.tail += tailPosition
                         else:
                             nodeBone.tail = nodeBone.head
