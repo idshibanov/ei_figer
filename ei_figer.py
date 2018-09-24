@@ -497,7 +497,7 @@ def calculate_mesh(self, context):
                 final = value1 + (value2 - value1) * q_height
                 bpy.data.objects[t_pos].location[i] = final
     # >>>>>TODO ANM_LIST
-
+    
 def ei_set_group(self, context):
     '''
     Set EI group for selected objects
@@ -1278,6 +1278,54 @@ class EIImport(bpy.types.Operator):
                 count += 1 # i miss C++
     
         return count
+        
+    def switchObjectMode(self, objectName, targetMode):    
+        scene = bpy.context.scene
+        for obj in bpy.data.objects:
+            if obj.name == objectName:
+                scene.objects.active = obj
+                #print('SWITCH MODE: ' + bpy.context.object.mode + ' (original)')
+                #bpy.ops.object.mode_set(mode=targetMode, toggle=False)
+                #print('SWITCH MODE: ' + bpy.context.object.mode + ' (want ' + targetMode + ')')
+                #why it's not setting it first time?
+                bpy.ops.object.mode_set(mode=targetMode, toggle=False)
+                print('SWITCH MODE: ' + bpy.context.object.mode)
+    
+
+    def get_vertex_sequence(self, mesh):        
+        #bpy.ops.mesh.select_all(action='DESELECT')
+        
+        bm = bmesh.from_edit_mesh(mesh)
+        bm.verts.ensure_lookup_table()
+        verts = [v.index for v in bm.verts]
+
+        vgs = []
+        while len(verts):        
+            bm.verts[verts[0]].select = True
+            bpy.ops.mesh.select_linked()
+            sv = [v.index for v in bm.verts if v.select]
+            vgs.append(sv)
+            for v in sv:
+                bm.verts[v].select = False
+                verts.remove(v)
+        bm.free() # prob not nec.
+        return vgs
+    
+    def createVertexGroup(self, target):
+        #obj = bpy.context.object
+        obj = bpy.data.objects.get(target)
+        
+        targetMesh = obj.data
+        
+        self.switchObjectMode(target, 'EDIT')
+        vGroups = self.get_vertex_sequence(targetMesh)
+
+        self.switchObjectMode(target, 'OBJECT')
+        for vg in vGroups:
+            group = obj.vertex_groups.new()
+            group.name = target
+            group.add(vg, 1.0, 'ADD')
+        
 
     def execute(self, context):
         self.report({'INFO'}, 'executing import')
@@ -1286,7 +1334,6 @@ class EIImport(bpy.types.Operator):
         clean()
 
         if path_file.lower().endswith('.lnk'):
-            tl4Mesh = EiMesh()
             links, root_mesh = import_lnk(path_file)
             print('root is ' + root_mesh)
             for node in links:
@@ -1297,8 +1344,9 @@ class EIImport(bpy.types.Operator):
                     cur_m.name = node
                     cur_m.read_file()
                     cur_m.create_mesh(scene.MorphType)
-                    if node == 'tl4':
-                        tl4Mesh = cur_m
+                    
+                    # immediately create vertex group
+                    self.createVertexGroup(node)
 
             create_hierarchy(links)
             if scene.MorphType == 'smpl':
@@ -1324,7 +1372,9 @@ class EIImport(bpy.types.Operator):
                     break
             arm = ob.data
             
-            bpy.ops.object.mode_set(mode='EDIT')
+            # figure out this one later
+            bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+            
             bpy.data.objects['Armature'].location = (0.0, 0.0, 0.0)
             arm.edit_bones.remove(arm.edit_bones.active)
             skeletonLNK = order(links, root_mesh)
@@ -1339,6 +1389,9 @@ class EIImport(bpy.types.Operator):
                     cur_b.name = boneName
                     cur_b.read_pos()
                     cur_b.set_pos(scene.MorphType)
+                        
+                    #reset mode to work with arm
+                    self.switchObjectMode('Armature', 'EDIT')
                     
                     #boneName nc
                     currentBoneName = boneName #nc
@@ -1405,7 +1458,7 @@ class EIImport(bpy.types.Operator):
                             nodeBone.tail.x += cur_b.pos[0][0]
                             nodeBone.tail.y += cur_b.pos[0][1]
                             nodeBone.tail.z += cur_b.pos[0][2]
-                        
+                     
                     ################### SKELETON
 
         if path_file.lower().endswith('.fig'):
