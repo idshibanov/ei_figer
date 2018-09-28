@@ -1404,13 +1404,14 @@ class EIImport(bpy.types.Operator):
                     currentBoneName = parentBoneName #nc will become bd
                     parentBoneName = links.get(currentBoneName) #bd wil become hp
                     
-                    childCount = self.countChildrenBones(links, currentBoneName)
-                    if childCount > 1:
-                        currentBoneName += '.' + boneName #if trying to add a bone with siblings
-                    
+                    #make sure we adjust parent name first to avoid it becoming 'box.bd.hd'
                     grandCCount = self.countChildrenBones(links, parentBoneName)
                     if grandCCount > 1:
                         parentBoneName += '.' + currentBoneName #hp will become hp.bd
+                    
+                    childCount = self.countChildrenBones(links, currentBoneName)
+                    if childCount > 1:
+                        currentBoneName += '.' + boneName #if trying to add a bone with siblings
                     
                     #print('Adding new bone: ' + currentBoneName + ' child: ' + str(childCount) + 'gp: ' + str(grandCCount))
                     arm.edit_bones.new(currentBoneName)
